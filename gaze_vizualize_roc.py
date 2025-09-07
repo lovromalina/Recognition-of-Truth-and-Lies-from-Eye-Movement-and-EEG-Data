@@ -1,8 +1,9 @@
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier, StackingClassifier
 from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.feature_selection import SelectKBest, mutual_info_classif
@@ -31,18 +32,32 @@ skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 rf = RandomForestClassifier(
     n_estimators=100, max_depth=2,
     min_samples_split=2, min_samples_leaf=2,
-    max_features='sqrt', class_weight=None,
+    max_features='sqrt',
     random_state=42, n_jobs=-1
 )
 svm = SVC(
     kernel='rbf', C=1, gamma='auto',
-    class_weight=None, probability=True, random_state=42
+    probability=True, random_state=42
 )
 mlp = MLPClassifier(
     hidden_layer_sizes=(300, 300), alpha=1e-05,
     learning_rate='constant', activation='tanh',
     learning_rate_init=0.005, n_iter_no_change=5,
     early_stopping=True, max_iter=2000, random_state=42
+)
+
+# Voting and Stacking classifiers
+voting = VotingClassifier(
+    estimators=[("rf", rf), ("svm", svm), ("mlp", mlp)],
+    voting='soft', n_jobs=-1
+)
+
+stacking = StackingClassifier(
+    estimators=[("rf", rf), ("svm", svm), ("mlp", mlp)],
+    final_estimator=LogisticRegression(max_iter=1000, random_state=42),
+    cv=skf,
+    passthrough=False,
+    n_jobs=-1
 )
 
 # Function to collect out-of-fold probabilities
@@ -70,7 +85,13 @@ def collect_cv_probabilities(model, X, y, skf):
     return np.array(y_true_all), np.array(y_proba_all)
 
 # Models to plot
-selected_models = {"Random Forest": rf, "SVM": svm, "MLP": mlp}
+selected_models = {
+    "RF": rf,
+    "SVM": svm,
+    "MLP": mlp,
+    "Voting Classifier": voting,
+    "Stacking Classifier": stacking
+}
 
 # Plot all ROC curves on the same figure
 plt.figure(figsize=(8, 6))
@@ -90,7 +111,6 @@ plt.xlim([0.0, 1.0])
 plt.ylim([0.0, 1.05])
 plt.xlabel('False Positive Rate')
 plt.ylabel('True Positive Rate')
-plt.title('ROC Curves for Gaze Models')
 plt.legend(loc="lower right")
 plt.tight_layout()
 

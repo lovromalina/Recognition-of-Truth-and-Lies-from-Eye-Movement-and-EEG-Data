@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.feature_selection import SelectKBest, mutual_info_classif
 from sklearn.metrics import roc_curve, auc
 import matplotlib
-matplotlib.use('Agg')  
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 np.random.seed(42)
@@ -18,10 +18,8 @@ df = pd.read_csv("video_features.csv")
 X = df.drop(columns=["truth", "path"])
 y = df["truth"]
 
-
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
-
 
 k = 1000
 selector = SelectKBest(score_func=mutual_info_classif, k=k)
@@ -55,14 +53,16 @@ stacking = StackingClassifier(
 
 # Model dictionary
 models = {
-    "Random Forest": rf,
+    "RF": rf,
     "SVM": svm,
     "MLP": mlp,
     "Voting Classifier": voting,
     "Stacking Classifier": stacking
 }
 
-# Loop through models and save ROC curves
+# Plot all ROC curves on a single figure
+plt.figure(figsize=(8, 6))
+
 for name, model in models.items():
     y_true_all = []
     y_proba_all = []
@@ -88,20 +88,22 @@ for name, model in models.items():
     y_proba_all = np.array(y_proba_all)
 
     # Compute ROC curve and AUC
-    fpr, tpr, thresholds = roc_curve(y_true_all, y_proba_all)
+    fpr, tpr, _ = roc_curve(y_true_all, y_proba_all)
     roc_auc = auc(fpr, tpr)
 
-    plt.figure(figsize=(6, 5))
-    plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC curve (AUC = {roc_auc:.3f})')
-    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title(f'{name} ROC Curve')
-    plt.legend(loc="lower right")
+    plt.plot(fpr, tpr, lw=2, label=f'{name} (AUC = {roc_auc:.3f})')
 
-    filename = f"{name.replace(' ', '_').lower()}_roc_curve_video.png"
-    plt.savefig(filename, dpi=300)
-    plt.close()
-    print(f"Saved ROC curve as {filename}")
+# Random chance line
+plt.plot([0, 1], [0, 1], color='gray', lw=1, linestyle='--', label='Random Chance')
+
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.legend(loc="lower right")
+plt.tight_layout()
+
+# Save combined figure
+plt.savefig("all_video_models_roc_curve.png", dpi=300)
+plt.close()
+print("Saved combined ROC curve as all_video_models_roc_curve.png")

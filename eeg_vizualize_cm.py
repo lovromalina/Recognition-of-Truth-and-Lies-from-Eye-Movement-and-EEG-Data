@@ -96,7 +96,6 @@ for name, model in all_models.items():
     
     plt.figure(figsize=(6, 5))
     disp.plot(cmap=plt.cm.Blues, values_format=".2f", ax=plt.gca(), colorbar=True)
-    plt.title(f"{name} Normalized Confusion Matrix")
     
     filename = f"{name.replace(' ', '_').lower()}_normalized_cm_eeg.png"
     plt.savefig(filename, dpi=300)

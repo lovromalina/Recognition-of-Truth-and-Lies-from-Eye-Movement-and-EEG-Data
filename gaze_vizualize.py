@@ -1,8 +1,9 @@
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier, StackingClassifier
 from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.feature_selection import SelectKBest, mutual_info_classif
@@ -29,14 +30,13 @@ skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 rf = RandomForestClassifier(
     n_estimators=100, max_depth=2,
     min_samples_split=2, min_samples_leaf=2,
-    max_features='sqrt', class_weight=None,
+    max_features='sqrt',
     random_state=42, n_jobs=-1
 )
 svm = SVC(
     kernel='rbf',
     C=1,
     gamma='auto',
-    class_weight=None,
     probability=True,
     random_state=42
 )
@@ -50,6 +50,21 @@ mlp = MLPClassifier(
     early_stopping=True,
     max_iter=2000,
     random_state=42
+)
+
+# Voting and Stacking classifiers
+voting = VotingClassifier(
+    estimators=[("rf", rf), ("svm", svm), ("mlp", mlp)],
+    voting='soft',
+    n_jobs=-1
+)
+
+stacking = StackingClassifier(
+    estimators=[("rf", rf), ("svm", svm), ("mlp", mlp)],
+    final_estimator=LogisticRegression(max_iter=1000, random_state=42),
+    cv=skf,
+    passthrough=False,
+    n_jobs=-1
 )
 
 # Function to collect out-of-fold predictions
@@ -69,11 +84,17 @@ def collect_cv_predictions(model, X, y, skf):
 
     return np.array(y_true_all), np.array(y_pred_all)
 
-# Models to visualize
-selected_models = {"Random Forest": rf, "SVM": svm, "MLP": mlp}
+# Model dictionary
+models = {
+    "RF": rf,
+    "SVM": svm,
+    "MLP": mlp,
+    "Voting Classifier": voting,
+    "Stacking Classifier": stacking
+}
 
 # Loop through models and save individual confusion matrices
-for name, model in selected_models.items():
+for name, model in models.items():
     y_true_cv, y_pred_cv = collect_cv_predictions(model, X_selected, y, skf)
     
     cm = confusion_matrix(y_true_cv, y_pred_cv, normalize='true')  # normalized
@@ -81,7 +102,6 @@ for name, model in selected_models.items():
     
     plt.figure(figsize=(6, 5))
     disp.plot(cmap=plt.cm.Blues, values_format=".2f", ax=plt.gca(), colorbar=True)
-    plt.title(f"{name} Normalized CM")
     
     # Save individual figure
     filename = f"{name.replace(' ', '_').lower()}_normalized_cm.png"

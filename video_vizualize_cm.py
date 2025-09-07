@@ -89,7 +89,6 @@ for name, model in models.items():
 
     plt.figure(figsize=(6, 5))
     disp.plot(cmap=plt.cm.Blues, values_format=".2f", ax=plt.gca(), colorbar=True)
-    plt.title(f"{name} Normalized CM")
 
     # Save figure
     filename = f"{name.replace(' ', '_').lower()}_normalized_cm_video.png"
